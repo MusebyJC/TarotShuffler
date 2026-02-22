@@ -7,7 +7,9 @@
   --goldGlow2: rgba(255, 170, 0, 0.55);
 
   --mystic: #9b5cff;
-  --mysticGlow: rgba(155,92,255,0.70);
+  --mysticEdge: #3a1871;
+  --mysticGlow1: rgba(155,92,255,0.70);
+  --mysticGlow1: rgba(148, 107, 213, 0.7);
 
   /* Wheel sizing (MUST match JS ITEM_H) */
   --rowH: 48px;
@@ -608,7 +610,7 @@ html, body{
   text-shadow:
     0 0 2px rgba(0,0,0,0.90),
     0 0 6px var(--mysticEdge),
-    0 0 16px var(--mysticGlow),
+    0 0 16px var(--mysticGlow1),
     0 0 28px rgba(93,43,255,0.55);
 }
 /* Keep nav visible */
@@ -715,7 +717,7 @@ html, body{
   border-color: var(--mystic);
   box-shadow:
     0 0 20px rgba(0,0,0,0.35),
-    0 0 16px var(--mysticGlow),
+    0 0 16px var(--mysticGlow1),
     0 0 32px rgba(93,43,255,0.55),
     0 0 3px var(--mysticEdge) inset;
 }
@@ -816,13 +818,15 @@ html, body{
 .card-orientation.rev{
   color: var(--mystic);
   background: rgba(155,92,255,0.12);
-  border-color: rgba(155,92,255,0.65);
+  border: 1.5px solid rgba(155,92,255,0.65);
   box-shadow:
-    0 0 12px var(--mysticGlow),
-    0 0 2px var(--mysticEdge) inset;
+    0 0 20px rgba(0,0,0,0.35),
+    0 0 14px var(--mysticEdge),
+    0 0 26px var(--mysticGlow2),
+    0 0 2px rgba(157, 3, 149, 0.55) inset;
   text-shadow:
-    0 0 2px rgba(0,0,0,0.85),
-    0 0 8px var(--mysticGlow);
+    0 0 2px rgba(77, 0, 68, 0.85),
+    0 0 8px var(--mysticGlow1);
 }
 
 /* Navigation */
@@ -846,7 +850,7 @@ html, body{
   border: 3px solid #444;
   background: #1a1a2e;
   color: #d4af37;
-  font-size: 4.5vw;
+  font-size: 8vw;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -855,19 +859,23 @@ html, body{
   padding: 0;
 }
 .nav-btn.up {
- color: var(--gold)
+  font-size: 5.5vw;
+  color: var(--gold)
 }
 
 .nav-btn.rev {
- color: var(--mystic)
+  font-size: 5.5vw;
+  color: var(--mystic)
 }
 
 .nav-btn.rev:active {
+  font-size: 7vw;
   background: var(--mystic);
   transform: scale(0.92);
 }
 
 .nav-btn:disabled {
+  font-size: 5.5vw;
   opacity: 0.25;
   pointer-events: none;
 }
@@ -877,7 +885,7 @@ html, body{
   border-color: rgba(155,92,255,0.65);
   box-shadow:
     0 0 20px rgba(0,0,0,0.35),
-    0 0 16px var(--mysticGlow),
+    0 0 16px var(--mysticGlow1),
     0 0 32px rgba(93,43,255,0.55),
     0 0 3px var(--mysticEdge) inset;
 
@@ -952,5 +960,85 @@ html, body{
     margin-bottom: max(1vh, env(safe-area-inset-bottom));
     padding: 2.2vw 10vw;
     font-size: 4vw;
+  }
+}
+
+/* ============================================================
+   FIX: "View Spread" button too huge after picking cards
+   Paste at END of style.css
+   ============================================================ */
+
+/* If your button uses .link-btn, this will fix it.
+   If it uses another class, add it to the selector list. */
+.link-btn,
+.btn-view-spread,
+.view-spread-btn,
+.btn-start {
+  flex: 0 0 auto;                 /* prevent flex stretching */
+  align-self: center;              /* don't stretch full width */
+  width: auto;
+  max-width: min(92vw, 420px);     /* cap size so it can't take over */
+  padding: clamp(10px, 1.6vh, 14px) clamp(16px, 4vw, 26px);
+  font-size: clamp(14px, 3.6vw, 18px);
+  line-height: 1.1;
+}
+
+/* If it's inside a sticky/footer container, keep footer compact */
+.grid-nav,
+.spread-nav {
+  padding-left: 3vw;
+  padding-right: 3vw;
+}
+
+/* ============================================================
+   SMALL SCREEN FIXES
+   1) Start screen "Next" button stretches naturally
+   2) Card detail nav buttons have larger text
+   Paste at END of style.css
+   ============================================================ */
+
+/* --- 1) START SCREEN: make the primary button stretch --- */
+.picker-footer{
+  width: min(92vw, 320px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.picker-footer .btn-start{
+  flex: 1 1 auto !important;     /* allow it to grow */
+  width: 100% !important;        /* fill remaining space */
+  align-self: stretch !important;
+  margin: 0 !important;          /* prevent left offset */
+  text-align: center;
+}
+
+/* IMPORTANT: your current "View Spread button too huge" fix includes .btn-start.
+   That rule is what makes Next small/centered.
+   This override forces btn-start back to full-width behavior on start screens. */
+
+/* --- 2) CARD DETAIL: bigger text inside next/prior buttons --- */
+.card-nav .nav-btn{
+  /* keep buttons usable + text readable across devices */
+  width: clamp(44px, 12vw, 64px);
+  height: clamp(44px, 12vw, 64px);
+  min-width: 44px;
+  min-height: 44px;
+
+  /* bigger icon/text */
+  font-size: clamp(18px, 6vw, 30px);
+  line-height: 1;
+}
+
+/* Extra boost on very small/short screens (Rabbit R1-like) */
+@media (max-height: 520px), (max-width: 420px){
+  .picker-footer .btn-start{
+    min-height: 48px;
+    font-size: clamp(16px, 4.6vw, 20px);
+    padding: 12px 0;
+  }
+
+  .card-nav .nav-btn{
+    font-size: clamp(20px, 7vw, 32px);
   }
 }

@@ -557,7 +557,7 @@ function renderSpread() {
 
       <div class="spread-nav">
         <button id="spreadDetailBtn" class="btn-start btn-sm">🔍VIEW DETAILS</button>
-        <button id="spreadHomeBtn" class="link-btn">↻ 🎴</button>
+        <button id="spreadHomeBtn" class="link-btn">↻ Another Deck?</button>
       </div>
     </div>
   `;
