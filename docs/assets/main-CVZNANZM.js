@@ -36,9 +36,7 @@
           </div>
         </div>
       </div>
-      <div class="picker-footer">
-  <button id="startBtn" class="btn-start">START DRAW</button>
-</div>
+      <button id="startBtn" class="btn-start">START DRAW</button>
     </div>
   `;const s=document.getElementById("deckWheel"),t=document.getElementById("countWheel");Q(s,j,r=>{j=r}),Q(t,e>=0?e:2,r=>{c=E[r]}),document.getElementById("startBtn").addEventListener("click",()=>{B=u[j].build(),C()})}function Q(e,s,t){const r=Array.from(e.querySelectorAll(".wheel-item")),_=r.length,a=Cv,g=a*2,h=g,l=180,d=(i,p,b)=>Math.max(p,Math.min(b,i)),D=e.closest(".wheel-mask"),U=D==null?void 0:D.querySelector(".wheel-highlight");function z(){U&&(U.classList.remove("pulse"),U.offsetWidth,U.classList.add("pulse"))}function P(i){const p=(i+h-g)/a;return d(Math.round(p),0,_-1)}function V(i){return g+i*a-h}function I(i){for(let p=0;p<_;p++){const b=r[p],T=Math.abs(p-i);b.classList.toggle("active",T===0),b.style.opacity=T===0?"1":T===1?"0.55":"0.22"}}function y(i,p=!0){const b=d(i,0,_-1);e.scrollTo({top:V(b),behavior:"smooth"}),I(b),t(b),p&&z()}y(s,!1);let x=!1,A=d(s,0,_-1),M=null;e.addEventListener("scroll",()=>{x||(x=!0,requestAnimationFrame(()=>{x=!1;const i=P(e.scrollTop);i!==A&&(A=i,I(i),t(i))})),clearTimeout(M),M=setTimeout(()=>{const i=P(e.scrollTop);y(i,!0)},l)},{passive:!0}),r.forEach((i,p)=>{i.addEventListener("click",()=>y(p,!0))})}function C(){const e=u[j],s=F(e.id);S=fv(B),o=[],f=0;const t=s?`style="background-image:url('${s}'); background-size:contain; background-position:center; background-repeat:no-repeat;"`:"";L.innerHTML=`
     <div class="shuffling">
