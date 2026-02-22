@@ -920,3 +920,51 @@ html, body{
   align-items: center;
   display: flex;
 }
+
+/* ============================================================
+   Rabbit R1 picker-only override (safe)
+   Paste at END of style.css
+   ============================================================ */
+
+/* R1 screen is short: keep the SAME UI, just make it fit */
+@media (max-height: 520px), (max-width: 420px) {
+
+  .picker-screen{
+    padding: 1.5vh 3vw 1.5vh; /* slightly tighter */
+  }
+
+  /* Title/heading slightly smaller so wheels + button fit */
+  .picker-title{
+    font-size: 6vw;
+    margin-bottom: 0.2vh;
+  }
+
+  .picker-heading{
+    font-size: 6vw;
+    letter-spacing: 3vw;
+    margin-bottom: 1vh;
+  }
+
+  /* Let the wheel area shrink and scroll internally if needed */
+  .picker-cols{
+    flex: 1;
+    min-height: 0;          /* CRITICAL: allows children to shrink */
+  }
+
+  .picker-col{
+    min-height: 0;          /* CRITICAL */
+  }
+
+  /* This is the main fix: wheel height becomes responsive */
+  .wheel-mask{
+    height: min(240px, 40vh);
+  }
+
+  /* Keep the Start button always visible at bottom */
+  .btn-start{
+    margin-top: auto;       /* pushes button down */
+    margin-bottom: max(1vh, env(safe-area-inset-bottom));
+    padding: 2.2vw 10vw;
+    font-size: 4vw;
+  }
+}
