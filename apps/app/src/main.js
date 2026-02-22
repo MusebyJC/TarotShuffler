@@ -258,126 +258,158 @@ async function init() {
 // ------------------------------------------------------------
 // iOS-STYLE TWO-COLUMN WHEEL PICKER
 // ------------------------------------------------------------
-const ITEM_H = 48;
+
+// ============================================================
+// TWO-STEP PICKER FLOW (Deck -> Count)
+// ============================================================
+let pickerStep = 0; // 0 = deck, 1 = count
 
 function renderPicker() {
+  pickerStep = 0;
+  renderPickerDeck();
+}
+
+function renderPickerDeck() {
   screen = 'picker';
-  const defaultPullIdx = PULL_OPTIONS.indexOf(pullCount);
+  pickerStep = 0;
 
   app.innerHTML = `
     <div class="picker-screen">
-      <div class="picker-title">🂠</div>
+      <div class="picker-title">🔮</div>
       <h1 class="picker-heading">TAROT</h1>
-      <div class="picker-cols">
-        <div class="picker-col">
-          <div class="picker-label">DECK</div>
-          <div class="wheel-mask">
-            <div class="wheel-highlight"></div>
-            <div class="wheel-scroll" id="deckWheel">
-              <div class="wheel-pad"></div>
-              ${DECK_LIST.map((d, i) => `
-                <div class="wheel-item" data-idx="${i}">
-                  ${d.thumb ? `<img class="wheel-thumb" src="${d.thumb}" alt="" />` : ``}
-                  <span class="wheel-text">${d.name}</span>
-                </div>
-              `).join('')}
-              <div class="wheel-pad"></div>
-            </div>
-          </div>
-        </div>
 
-        <div class="picker-col picker-col-count">
-          <div class="picker-label">CARDS</div>
-          <div class="wheel-mask">
-            <div class="wheel-highlight"></div>
-            <div class="wheel-scroll" id="countWheel">
-              <div class="wheel-pad"></div>
-              ${PULL_OPTIONS.map((n, i) => `
-                <div class="wheel-item wheel-item-count" data-idx="${i}">
-                  <span class="wheel-num">${n}</span>
-                </div>
-              `).join('')}
-              <div class="wheel-pad"></div>
-            </div>
+      <div class="picker-single">
+        <div class="picker-label">DECK</div>
+
+        <div class="wheel-mask">
+          <div class="wheel-highlight"></div>
+          <div class="wheel-scroll" id="deckWheel">
+            <div class="wheel-pad"></div>
+            ${DECK_LIST.map((d, i) => `
+              <div class="wheel-item" data-idx="${i}">
+                <img class="wheel-thumb" src="${d.thumb}" alt="" onerror="this.style.display='none'"/>
+                <span class="wheel-text">${d.name}</span>
+              </div>
+            `).join('')}
+            <div class="wheel-pad"></div>
           </div>
         </div>
       </div>
-      <button id="startBtn" class="btn-start">START DRAW</button>
+
+      <div class="picker-footer">
+        <button id="nextBtn" class="btn-start btn-next" aria-label="Next">→</button>
+      </div>
     </div>
   `;
 
   const deckWheel = document.getElementById('deckWheel');
-  const countWheel = document.getElementById('countWheel');
-
   initWheel(deckWheel, currentDeckIdx, idx => { currentDeckIdx = idx; });
-  initWheel(countWheel, defaultPullIdx >= 0 ? defaultPullIdx : 2, idx => { pullCount = PULL_OPTIONS[idx]; });
 
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    renderPickerCount();
+  });
+}
+
+function renderPickerCount() {
+  screen = 'picker';
+  pickerStep = 1;
+
+  const defaultPullIdx = Math.max(0, PULL_OPTIONS.indexOf(pullCount));
+
+  app.innerHTML = `
+    <div class="picker-screen">
+      <div class="picker-title">🔮</div>
+      <h1 class="picker-heading">TAROT</h1>
+
+      <div class="picker-single">
+        <div class="picker-label">CARDS</div>
+
+        <div class="wheel-mask wheel-mask-count">
+          <div class="wheel-highlight"></div>
+          <div class="wheel-scroll" id="countWheel">
+            <div class="wheel-pad"></div>
+            ${PULL_OPTIONS.map((n, i) => `
+              <div class="wheel-item wheel-item-count" data-idx="${i}">
+                <span class="wheel-num">${n}</span>
+              </div>
+            `).join('')}
+            <div class="wheel-pad"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="picker-footer">
+        <button id="backBtn" class="link-btn">←</button>
+        <button id="startBtn" class="btn-start">START DRAW</button>
+      </div>
+    </div>
+  `;
+
+  const countWheel = document.getElementById('countWheel');
+  initWheel(countWheel, defaultPullIdx, idx => { pullCount = PULL_OPTIONS[idx]; });
+
+  document.getElementById('backBtn').addEventListener('click', renderPickerDeck);
   document.getElementById('startBtn').addEventListener('click', () => {
     fullDeck = DECK_LIST[currentDeckIdx].build();
     doShuffle();
   });
 }
 
+// ============================================================
+// WHEEL (dynamic row height, no hard-coded px)
+// ============================================================
+function getRowHeightPx(el) {
+  const firstItem = el.querySelector('.wheel-item');
+  if (!firstItem) return 48;
+  const h = firstItem.getBoundingClientRect().height;
+  return Math.max(32, Math.round(h)); // guard
+}
+
 function initWheel(el, defaultIdx, onChange) {
-  const items = Array.from(el.querySelectorAll('.wheel-item'));
+  const items = el.querySelectorAll('.wheel-item');
   const totalItems = items.length;
 
-  // start aligned
+  const ITEM_H = getRowHeightPx(el);
+
+  // Scroll to default center-aligned
   el.scrollTop = defaultIdx * ITEM_H;
 
   let scrollTimer = null;
-  let rafPending = false;
-  let lastIdx = -1;
 
-  function applyActive(activeIdx) {
-    if (activeIdx === lastIdx) return;
-    lastIdx = activeIdx;
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
+  function updateStyles(activeIdx) {
+    items.forEach((item, i) => {
       const dist = Math.abs(i - activeIdx);
-
       item.classList.toggle('active', dist === 0);
       item.style.opacity = dist === 0 ? '1' : dist === 1 ? '0.45' : '0.2';
-
-      const scale = dist === 0 ? 1 : dist === 1 ? 0.90 : 0.80;
-      item.style.transform = `scale(${scale}) translateZ(0)`;
-    }
+      const scale = dist === 0 ? 1 : dist === 1 ? 0.9 : 0.78;
+      item.style.transform = `scale(${scale})`;
+    });
   }
 
   function snapToNearest() {
     const idx = Math.round(el.scrollTop / ITEM_H);
     const clamped = Math.max(0, Math.min(idx, totalItems - 1));
     el.scrollTo({ top: clamped * ITEM_H, behavior: 'smooth' });
-    applyActive(clamped);
+    updateStyles(clamped);
     onChange(clamped);
   }
 
   el.addEventListener('scroll', () => {
-    // throttle style updates
-    if (!rafPending) {
-      rafPending = true;
-      requestAnimationFrame(() => {
-        rafPending = false;
-        const idx = Math.round(el.scrollTop / ITEM_H);
-        const clamped = Math.max(0, Math.min(idx, totalItems - 1));
-        applyActive(clamped);
-      });
-    }
-
     clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(snapToNearest, 140);
+    const approxIdx = Math.round(el.scrollTop / ITEM_H);
+    const clamped = Math.max(0, Math.min(approxIdx, totalItems - 1));
+    updateStyles(clamped);
+    scrollTimer = setTimeout(snapToNearest, 110);
   }, { passive: true });
 
-  // click-to-select
+  updateStyles(defaultIdx);
+
   items.forEach((item, i) => {
     item.addEventListener('click', () => {
       el.scrollTo({ top: i * ITEM_H, behavior: 'smooth' });
-      setTimeout(() => { applyActive(i); onChange(i); }, 200);
+      setTimeout(() => { updateStyles(i); onChange(i); }, 160);
     });
   });
-
-  applyActive(defaultIdx);
 }
 
 // ------------------------------------------------------------

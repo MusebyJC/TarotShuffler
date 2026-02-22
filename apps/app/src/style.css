@@ -17,7 +17,12 @@
   /* Layout */
   --panelW: min(92vw, 320px);
   --gap: 12px;
+
+  --highlightOffset: 5px; /* try 1px, 2px, 3px… (positive moves DOWN) */
 }
+
+/* Highlight sits on the middle row */
+
 
 *{ margin:0; padding:0; box-sizing:border-box; }
 
@@ -40,116 +45,105 @@ html, body{
   justify-content:center;
 }
 
-/* ============================================================
-   PICKER SCREEN (Rabbit R1 safe)
-   ============================================================ */
-
+/* ===== Picker shell (same for both steps) ===== */
 .picker-screen{
   width: 100vw;
-  height: 100vh;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-start;
-  padding: 16px 0 14px;
-  gap: 10px;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4vh 0 3vh;
+  overflow: hidden;
 }
 
-/* Title + heading */
-.picker-title{
-  font-size: 18px;
-  line-height: 1;
-  margin-top: 6px;
-  filter: drop-shadow(0 0 6px rgba(155,92,255,0.55));
-}
-
+.picker-title{ font-size: clamp(18px, 5vw, 26px); margin: 0 0 0.5vh; }
 .picker-heading{
-  font-size: 28px;
-  letter-spacing: 10px;
-  margin-left: 10px; /* visually centers letter-spacing */
+  font-size: clamp(22px, 7vw, 34px);
+  letter-spacing: 0.6em;
+  margin-left: 0.6em;
   color: var(--gold);
-  text-shadow: 0 0 15px rgba(255, 210, 90, 0.35);
-  margin-bottom: 6px;
+  text-shadow: 0 0 15px rgba(255,210,90,.35);
+  margin-bottom: 2.2vh;
 }
 
-/* Two columns */
-.picker-cols{
-  width: var(--panelW);
+.picker-panel{
+  width: min(92vw, 320px);
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: 1.6fr 0.8fr;
-  gap: var(--gap);
+  display: flex;
+  flex-direction: column;
   align-items: stretch;
-}
-
-.picker-col{
-  min-height: 0;
-  display:flex;
-  flex-direction:column;
-  align-items:stretch;
+  gap: 1.2vh;
 }
 
 .picker-label{
-  font-size: 12px;
-  letter-spacing: 7px;
-  margin: 0 0 6px 6px;
-  text-transform: uppercase;
-  font-weight: 800;
+  text-align: center;
+  font-size: clamp(10px, 3.2vw, 14px);
   color: var(--mystic);
-  text-shadow: 0 0 10px var(--mysticGlow), 0 0 2px rgba(0,0,0,0.85);
+  letter-spacing: 0.55em;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px var(--mysticGlow), 0 0 2px rgba(0,0,0,.85);
 }
 
-/* Wheel container */
+/* ===== Wheel sizing: flexible but consistent =====
+   We still keep snap perfect by letting JS read the computed row height.
+*/
+:root{
+  --visibleRows: 3;               /* R1: 3 rows visible */
+  --rowH: clamp(42px, 12.5vw, 56px); /* flexible row height */
+  --padRows: 1;                   /* (visibleRows-1)/2 */
+}
+
 .wheel-mask{
   position: relative;
   width: 100%;
-  height: calc(var(--rowH) * var(--visibleRows)); /* 3 rows */
+  height: calc(var(--rowH) * var(--visibleRows));
   overflow: hidden;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
 }
 
-/* top/bottom fade */
 .wheel-mask::before,
 .wheel-mask::after{
   content:'';
   position:absolute;
   left:0; right:0;
-  height: calc(var(--rowH) * var(--padRows)); /* 1 row */
-  z-index: 2;
+  height: calc(var(--rowH) * var(--padRows));
+  z-index:2;
   pointer-events:none;
 }
+
 .wheel-mask::before{
   top:0;
-  background: linear-gradient(to bottom, #0a0a12 0%, rgba(10,10,18,0) 100%);
+  background: linear-gradient(to bottom, #0a0a12 0%, transparent 100%);
 }
 .wheel-mask::after{
   bottom:0;
-  background: linear-gradient(to top, #0a0a12 0%, rgba(10,10,18,0) 100%);
+  background: linear-gradient(to top, #0a0a12 0%, transparent 100%);
 }
 
-/* Highlight = middle row */
+/* highlight always middle row */
 .wheel-highlight{
   position:absolute;
-  top: calc(var(--rowH) * var(--padRows)); /* exactly row 2 */
-  left: 6%;
-  right: 6%;
+  top: calc(var(--rowH) * var(--padRows) + var(--highlightOffset));
+  left: 1%;
+  right: 1%;
   height: var(--rowH);
   border-radius: 14px;
-  z-index: 1;
+  z-index:1;
   pointer-events:none;
-
-  border: 1.5px solid rgba(255, 210, 90, 0.75);
-  background: rgba(255, 210, 90, 0.08);
+  
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
+  background: rgba(212, 175, 55, 0.08);
   box-shadow:
-    0 0 18px rgba(255, 210, 90, 0.30),
-    0 0 30px rgba(255, 170, 0, 0.20),
-    inset 0 0 2px rgba(255, 241, 176, 0.55);
+    0 0 18px rgba(0,0,0,.35),
+    0 0 14px var(--goldGlow1),
+    0 0 26px var(--goldGlow2),
+    0 0 2px rgba(255,241,176,.55) inset;
 }
 
-/* Scroll area */
 .wheel-scroll{
   width:100%;
   height:100%;
@@ -160,81 +154,100 @@ html, body{
 }
 .wheel-scroll::-webkit-scrollbar{ display:none; }
 
-/* padding above/below (1 row each) */
 .wheel-pad{
   height: calc(var(--rowH) * var(--padRows));
   flex-shrink: 0;
 }
 
-/* items */
 .wheel-item{
   height: var(--rowH);
   display:flex;
   align-items:center;
-  gap: 10px;
+  gap: 8px;
   padding: 0 12px;
   scroll-snap-align:center;
   cursor:pointer;
   -webkit-tap-highlight-color: transparent;
-
-  /* reduce twitch/blink */
-  transform: translateZ(0);
-  backface-visibility: hidden;
+  transition: opacity .14s ease, transform .14s ease;
   will-change: transform, opacity;
 }
 
+/* Prevent twitch */
+.wheel-text, .wheel-num{
+  transform: translateZ(0);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* deck row bits */
 .wheel-thumb{
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: clamp(26px, 8vw, 34px);
+  height: clamp(26px, 8vw, 34px);
+  border-radius: 8px;
   object-fit: cover;
   background: #1a1a2e;
   flex-shrink: 0;
 }
-
 .wheel-text{
-  font-size: 14px;
-  font-weight: 800;
+  font-size: clamp(12px, 3.6vw, 16px);
+  font-weight: 700;
   color: #f0e6d0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  -webkit-font-smoothing: antialiased;
 }
-
 .wheel-item-count{ justify-content:center; }
-
 .wheel-num{
-  font-size: 16px;
-  font-weight: 900;
+  font-size: clamp(14px, 4.2vw, 18px);
+  font-weight: 800;
   color: #f0e6d0;
-  -webkit-font-smoothing: antialiased;
 }
 
-/* Start button (always visible, never overlaps wheels) */
-.btn-start{
-  width: var(--panelW);
-  height: 56px;
-  border-radius: 16px;
-  border: none;
-  cursor: pointer;
-  flex-shrink: 0;
+/* footer */
+.picker-footer{
+  width: min(92vw, 320px);
+  display:flex;
+  gap: 12px;
+  align-items:center;
+  justify-content: space-between;
+  padding-top: 1.8vh;
+}
 
-  font-size: 16px;
+.btn-start{
+  flex: 1;
+  min-height: 44px;
+  padding: 14px 0;
+  font-size: clamp(14px, 4vw, 18px);
   font-weight: 900;
-  letter-spacing: 6px;
+  letter-spacing: 0.32em;
 
   background: linear-gradient(135deg, var(--gold3), var(--gold2));
   color: #0a0a12;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
   box-shadow:
-    0 12px 30px rgba(0,0,0,0.45),
-    0 0 18px rgba(255, 210, 90, 0.35);
+    0 10px 24px rgba(0,0,0,.45),
+    0 0 18px rgba(255,210,90,.35);
+  forced-color-adjust: none;
 }
 
-.btn-start:active{
-  opacity: 0.92;
-  transform: scale(0.98);
+.link-btn{
+  width: 48px;
+  min-width: 48px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(155,92,255,.45);
+  background: rgba(155,92,255,.08);
+  color: var(--mystic);
+  font-weight: 900;
+  font-size: 18px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  forced-color-adjust: none;
 }
+
 
 /* ============================================================
    SHUFFLE ANIMATION (no text, cards only)
