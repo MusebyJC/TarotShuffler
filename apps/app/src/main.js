@@ -281,7 +281,9 @@ function renderPicker() {
           </div>
         </div>
       </div>
-      <button id="startBtn" class="btn-start">START DRAW</button>
+      <div class="picker-footer">
+  <button id="startBtn" class="btn-start">START DRAW</button>
+</div>
     </div>
   `;
 

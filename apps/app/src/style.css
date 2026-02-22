@@ -44,223 +44,93 @@ html, body{
 /* ============================================================
    iOS-STYLE WHEEL PICKER SCREEN
    ============================================================ */
-.picker-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* ===========================
+   PICKER SCREEN (R1 fixed)
+   =========================== */
+
+.picker-screen{
   height: 100vh;
   width: 100vw;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px 12px;
+  overflow: hidden;
 }
 
-.picker-title {
-  font-size: 4vw;
-  Align-items: center;
-  margin-bottom: 0.3vh;
-  filter: drop-shadow(0 0 6px rgba(180, 130, 255, 50));
-  color: linear-gradient(135deg, #d4af37, #b8860b);
-  shadow:
-    0 0 20px rgba(0,0,0,0.35);
-    0 0 14px var(--goldGlow1);
-    0 0 26px var(--goldGlow2);
-    0 0 2px rgba(255, 241, 176, 0.55) inset;
-
+/* Top area */
+.picker-title{
+  font-size: 16px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  opacity: 0.9;
 }
 
 .picker-heading{
-  font-size:20px;
-  letter-spacing:8px;
-  margin:4px 0 6px;
-  color:var(--gold);
-  text-shadow:0 0 12px var(--goldGlow1);
+  font-size: 18px;
+  letter-spacing: 10px;
+  margin: 6px 0 8px;
+  color: var(--gold);
+  text-shadow: 0 0 12px var(--goldGlow1), 0 0 18px var(--goldGlow2);
 }
 
+/* Middle area: wheels take available space */
 .picker-cols{
-  width:100%;
-  max-width:300px;
-  display:grid;
-  grid-template-columns: 1.3fr 0.7fr;
-  gap:8px;
-  flex:1;
+  display: grid;
+  grid-template-columns: 1fr 0.55fr;  /* deck wider than cards count */
+  gap: 10px;
+  width: 100%;
+  flex: 1;                /* THIS is what prevents pushing button off */
+  min-height: 0;          /* important so children can scroll */
+  align-items: stretch;
 }
 
-.picker-col {
-  flex: 0;
+.picker-col{
   display: flex;
   flex-direction: column;
-  align-items: center;
+  min-height: 0;          /* allow wheel-mask to shrink properly */
 }
 
-.picker-col-count {
-  flex: 1;
-}
-
-.picker-label {
-  font-size: 1.5vw;
-  Color: var(--mystic);
-  text-shadow:
-    0 0 12px var(--mysticGlow);
-    0 0 2px rgba(0,0,0,0.85);
-    0 0 8px var(--mysticGlow);
-    0 0 2px var(--mysticEdge) inset;
-
-  letter-spacing: 1vw;
+.picker-label{
+  font-size: 11px;
+  letter-spacing: 6px;
   text-transform: uppercase;
-  margin-bottom: 0.5vh;
-  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--mystic);
+  text-shadow: 0 0 10px var(--mysticGlow);
 }
 
-/* Wheel mask + highlight */
-/* ===========================
-   WHEEL PICKER (R1 stable)
-   =========================== */
+/* Wheel container should expand inside column */
 .wheel-mask{
-  position: relative;
-  width: 100%;
-  height: 240px;                 /* 5 × 48 */
-  overflow: hidden;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  flex: 1;
+  min-height: 0;
 }
 
-.wheel-mask::before,
-.wheel-mask::after{
-  content:'';
-  position:absolute;
-  left:0; right:0;
-  height: 96px;                  /* 2 × 48 */
-  z-index:2;
-  pointer-events:none;
+/* Bottom pinned button area */
+.picker-footer{
+  flex-shrink: 0;
+  padding-top: 10px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
 }
 
-.wheel-mask::before{
-  top:0;
-  background: linear-gradient(to bottom, #0a0a12 0%, rgba(10,10,18,0.2) 55%, transparent 100%);
-}
-
-.wheel-mask::after{
-  bottom:0;
-  background: linear-gradient(to top, #0a0a12 0%, rgba(10,10,18,0.2) 55%, transparent 100%);
-}
-
-.wheel-highlight{
-  position:absolute;
-  top: 96px;                     /* 2 × 48 */
-  left: 6%;
-  right: 6%;
-  height: 48px;
-  border-radius: 14px;
-  z-index:1;
-  pointer-events:none;
-
-  background: rgba(255,210,90,0.08);
-  border: 1px solid rgba(255,210,90,0.55);
-  box-shadow:
-    0 0 10px var(--goldGlow1),
-    0 0 18px var(--goldGlow2),
-    0 0 2px rgba(255,241,176,0.55) inset;
-}
-
-/* IMPORTANT: stable scrolling */
-.wheel-scroll{
-  width:100%;
-  height:100%;
-  overflow-y:auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: none;        /* JS will do snapping */
-  scrollbar-width:none;
-  overscroll-behavior: contain;
-}
-.wheel-scroll::-webkit-scrollbar{ display:none; }
-
-.wheel-pad{
-  height:96px;                   /* must be 2 rows */
-  flex-shrink:0;
-}
-
-.wheel-item{
-  height:48px;                   /* must match ITEM_H */
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:0 12px;
-  cursor:pointer;
-  -webkit-tap-highlight-color: transparent;
-
-  /* reduce twitch/jank */
-  transition: opacity 80ms linear;
-  will-change: opacity;
-}
-
-.wheel-item.active{
-  opacity: 1 !important;
-}
-
-.wheel-thumb{
-  width:30px;
-  height:30px;
-  border-radius:8px;
-  background:#1a1a2e;
-  flex-shrink:0;
-  object-fit: contain;
-}
-
-.wheel-text{
-  font-size:14px;
-  font-weight:700;
-  color:#f0e6d0;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.wheel-item-count{ justify-content:center; }
-
-.wheel-num{
-  font-size:16px;
-  font-weight:800;
-  color:#f0e6d0;
-}
-
-/* Pulse (keep it lightweight) */
-@keyframes wheelPulseGold{
-  0%   { box-shadow: 0 0 10px var(--goldGlow1), 0 0 18px var(--goldGlow2), 0 0 2px rgba(255,241,176,0.55) inset; }
-  50%  { box-shadow: 0 0 16px rgba(255,210,90,0.95), 0 0 30px rgba(255,170,0,0.85), 0 0 6px rgba(255,241,176,0.75) inset; }
-  100% { box-shadow: 0 0 10px var(--goldGlow1), 0 0 18px var(--goldGlow2), 0 0 2px rgba(255,241,176,0.55) inset; }
-}
-.wheel-highlight.pulse{ animation: wheelPulseGold 200ms ease-out; }
-/* Start button */
 .btn-start{
-  width:100%;
-  max-width:300px;
-  height:46px;
-  font-size:15px;
-  font-weight:900;
-  letter-spacing:3px;
-  border-radius:14px;
-  margin-top:8px;
+  width: 88%;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  color: #0a0a12;
+  background: linear-gradient(135deg, var(--gold3), var(--gold2));
+  box-shadow: 0 0 10px var(--goldGlow1), 0 0 18px var(--goldGlow2);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.btn-start:active {
-  opacity: 0.8;
-  transform: scale(0.96);
-}
-
-.btn-sm {
-  padding: 2vw 6vw;
-  font-size: 3.5vw;
-  letter-spacing: 0.6vw;
-}
-
-/* ===== Wheel highlight pulse on snap ===== */
-@keyframes wheelPulseGold {
-  0%   { box-shadow: 0 0 10px var(--goldGlow1), 0 0 18px var(--goldGlow2), 0 0 2px rgba(255,241,176,0.55) inset; }
-  50%  { box-shadow: 0 0 16px rgba(255, 210, 90, 0.95), 0 0 34px rgba(255, 170, 0, 0.85), 0 0 6px rgba(255,241,176,0.75) inset; }
-  100% { box-shadow: 0 0 10px var(--goldGlow1), 0 0 18px var(--goldGlow2), 0 0 2px rgba(255,241,176,0.55) inset; }
-}
-
-.wheel-highlight.pulse {
-  animation: wheelPulseGold 220ms ease-out;
+.btn-start:active{
+  transform: scale(0.98);
+  opacity: 0.92;
 }
 
 /* ============================================================
