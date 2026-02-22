@@ -20,7 +20,7 @@
   --panelW: min(92vw, 320px);
   --gap: 12px;
 
-  --highlightOffset: 5px; /* try 1px, 2px, 3px… (positive moves DOWN) */
+  --highlightOffset: 0px; /* try 1px, 2px, 3px… (positive moves DOWN) */
 }
 
 /* Highlight sits on the middle row */

@@ -9,6 +9,21 @@ import './style.css';
 // src/assets/decks/<deckId>/thumb.jpg
 // src/assets/decks/<deckId>/image/00.jpg ... 77.jpg
 //
+
+// ============================================================
+// R1 SIDE-WHEEL -> WHEEL PICKER CONTROL
+// ============================================================
+let activeWheelCtrl = null; // set by initWheel()
+
+function setActiveWheelController(ctrl) {
+  activeWheelCtrl = ctrl;
+}
+
+function stepActiveWheel(delta) {
+  if (!activeWheelCtrl) return;
+  activeWheelCtrl.step(delta);
+}
+
 const LOCAL_ASSETS = import.meta.glob(
   './assets/decks/**/{thumb.{jpg,jpeg,png,JPG,JPEG,PNG},back.{jpg,jpeg,png,JPG,JPEG,PNG},image/*.{jpg,jpeg,png,JPG,JPEG,PNG},images/*.{jpg,jpeg,png,JPG,JPEG,PNG}}',
   { eager: true, query: '?url', import: 'default' }
@@ -362,18 +377,15 @@ function getRowHeightPx(el) {
   const firstItem = el.querySelector('.wheel-item');
   if (!firstItem) return 48;
   const h = firstItem.getBoundingClientRect().height;
-  return Math.max(32, Math.round(h)); // guard
+  return Math.max(32, Math.round(h));
 }
 
 function initWheel(el, defaultIdx, onChange) {
-  const items = el.querySelectorAll('.wheel-item');
+  const items = Array.from(el.querySelectorAll('.wheel-item'));
   const totalItems = items.length;
-
   const ITEM_H = getRowHeightPx(el);
 
-  // Scroll to default center-aligned
-  el.scrollTop = defaultIdx * ITEM_H;
-
+  let currentIdx = Math.max(0, Math.min(defaultIdx, totalItems - 1));
   let scrollTimer = null;
 
   function updateStyles(activeIdx) {
@@ -386,29 +398,46 @@ function initWheel(el, defaultIdx, onChange) {
     });
   }
 
-  function snapToNearest() {
-    const idx = Math.round(el.scrollTop / ITEM_H);
+  function scrollToIdx(idx, smooth = true) {
     const clamped = Math.max(0, Math.min(idx, totalItems - 1));
-    el.scrollTo({ top: clamped * ITEM_H, behavior: 'smooth' });
+    currentIdx = clamped;
+    el.scrollTo({ top: clamped * ITEM_H, behavior: smooth ? 'smooth' : 'auto' });
     updateStyles(clamped);
     onChange(clamped);
   }
+
+  function snapToNearest() {
+    const idx = Math.round(el.scrollTop / ITEM_H);
+    scrollToIdx(idx, true);
+  }
+
+  // initial position
+  el.scrollTop = currentIdx * ITEM_H;
+  updateStyles(currentIdx);
+  onChange(currentIdx);
+
+  // Make this wheel the active one for side-wheel control
+  setActiveWheelController({
+    step(delta) {
+      scrollToIdx(currentIdx + delta, true);
+    },
+    getIndex() { return currentIdx; },
+    setIndex(i) { scrollToIdx(i, true); },
+    destroy() { if (activeWheelCtrl && activeWheelCtrl.getIndex === this.getIndex) activeWheelCtrl = null; }
+  });
 
   el.addEventListener('scroll', () => {
     clearTimeout(scrollTimer);
     const approxIdx = Math.round(el.scrollTop / ITEM_H);
     const clamped = Math.max(0, Math.min(approxIdx, totalItems - 1));
+    currentIdx = clamped;
     updateStyles(clamped);
     scrollTimer = setTimeout(snapToNearest, 110);
   }, { passive: true });
 
-  updateStyles(defaultIdx);
-
+  // Tap to select
   items.forEach((item, i) => {
-    item.addEventListener('click', () => {
-      el.scrollTo({ top: i * ITEM_H, behavior: 'smooth' });
-      setTimeout(() => { updateStyles(i); onChange(i); }, 160);
-    });
+    item.addEventListener('click', () => scrollToIdx(i, true));
   });
 }
 
@@ -644,13 +673,17 @@ function persistSession() {
 // ------------------------------------------------------------
 window.addEventListener('sideClick', () => {
   if (screen === 'picker') {
-    fullDeck = DECK_LIST[currentDeckIdx].build();
-    doShuffle();
-  } else if (screen === 'spread') {
-    renderCard(0);
-  } else if (screen === 'card') {
-    doShuffle();
+    // Deck screen: go next. Count screen: start.
+    const next = document.getElementById('nextBtn');
+    const start = document.getElementById('startBtn');
+    if (next) next.click();
+    else if (start) start.click();
+    return;
   }
+
+  // keep your existing behavior for other screens
+  if (screen === 'spread') renderCard(0);
+  else if (screen === 'card') doShuffle();
 });
 
 window.addEventListener('scrollDown', () => {
