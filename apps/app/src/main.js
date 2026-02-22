@@ -280,6 +280,7 @@ async function init() {
 let pickerStep = 0; // 0 = deck, 1 = count
 
 function renderPicker() {
+  screen = 'picker';
   pickerStep = 0;
   renderPickerDeck();
 }
@@ -671,28 +672,66 @@ function persistSession() {
 // ------------------------------------------------------------
 // HARDWARE INPUT
 // ------------------------------------------------------------
-window.addEventListener('sideClick', () => {
+
+// ============================================================
+// HARDWARE INPUT (Rabbit R1) - SINGLE SOURCE OF TRUTH
+// ============================================================
+
+// (Optional) helper to click a visible button safely
+function clickIfExists(id) {
+  const el = document.getElementById(id);
+  if (el && typeof el.click === 'function') el.click();
+  return !!el;
+}
+
+window.addEventListener('sideClick', (e) => {
+  // Always prefer picker actions when on picker screens
   if (screen === 'picker') {
-    // Deck screen: go next. Count screen: start.
-    const next = document.getElementById('nextBtn');
-    const start = document.getElementById('startBtn');
-    if (next) next.click();
-    else if (start) start.click();
+    // Deck screen has nextBtn; Count screen has startBtn/backBtn
+    if (clickIfExists('nextBtn')) return;
+    if (clickIfExists('startBtn')) return;
+    // fallback: do nothing
     return;
   }
 
-  // keep your existing behavior for other screens
-  if (screen === 'spread') renderCard(0);
-  else if (screen === 'card') doShuffle();
+  // Spread screen: open first card
+  if (screen === 'spread') {
+    renderCard(0);
+    return;
+  }
+
+  // Card screen: reshuffle (your current behavior)
+  if (screen === 'card') {
+    doShuffle();
+    return;
+  }
+
+  // Grid screen: do nothing on side click (or customize)
+  if (screen === 'grid') return;
 });
 
-window.addEventListener('scrollDown', () => {
-  if (screen === 'card' && viewIndex < drawnCards.length - 1) renderCard(viewIndex + 1);
+window.addEventListener('scrollDown', (e) => {
+  if (screen === 'picker') {
+    stepActiveWheel(+1);
+    return;
+  }
+  if (screen === 'card' && viewIndex < drawnCards.length - 1) {
+    renderCard(viewIndex + 1);
+    return;
+  }
 });
 
-window.addEventListener('scrollUp', () => {
-  if (screen === 'card' && viewIndex > 0) renderCard(viewIndex - 1);
+window.addEventListener('scrollUp', (e) => {
+  if (screen === 'picker') {
+    stepActiveWheel(-1);
+    return;
+  }
+  if (screen === 'card' && viewIndex > 0) {
+    renderCard(viewIndex - 1);
+    return;
+  }
 });
+
 
 if (typeof PluginMessageHandler === 'undefined') {
   window.addEventListener('keydown', (e) => {
