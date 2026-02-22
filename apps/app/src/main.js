@@ -299,180 +299,90 @@ function renderPicker() {
 
 function initWheel(el, defaultIdx, onChange) {
   const items = Array.from(el.querySelectorAll('.wheel-item'));
-  const totalItems = items.length;
+  const total = items.length;
 
-  const ROW_H = ITEM_H;              // must match CSS row height (48)
-  const SNAP_DELAY = 140;            // debounce for snap
-  const MAX_TILT = 22;               // deg
-  const MAX_SCALE_DOWN = 0.78;
-  const MAX_BLUR = 0.6;
+  const ROW_H = ITEM_H;             // 48
+  const PAD = ROW_H * 2;            // wheel-pad is 96 (2 rows)
+  const CENTER_Y = PAD;             // highlight starts at 96px (top of center row)
+  const SNAP_DELAY = 180;           // more stable on R1
 
-  // Velocity snap tuning
-  const VELOCITY_THRESHOLD = 0.35;   // px/ms -> above this we "throw"
-  const PROJECT_MS = 220;            // how far we project the momentum
-  const MAX_THROW_ROWS = 7;          // cap the throw (feels controlled)
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
-  const clampIdx = (idx) => Math.max(0, Math.min(idx, totalItems - 1));
-  const maxTop = (totalItems - 1) * ROW_H;
+  const mask = el.closest('.wheel-mask');
+  const highlight = mask?.querySelector('.wheel-highlight');
 
-  // Find highlight element for pulse
-  const highlight = el.closest('.wheel-mask')?.querySelector('.wheel-highlight');
-
-  // ---- Tick sound (WebAudio). Works on most browsers once user interacted.
-  let audioCtx = null;
-  function tickSound(strength = 1) {
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      // Some environments suspend until interaction; ignore if it fails
-      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-      const t0 = audioCtx.currentTime;
-
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      // Tiny clicky "tick"
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(900 + 250 * strength, t0);
-
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.06 * strength, t0 + 0.008);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.055);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(t0);
-      osc.stop(t0 + 0.06);
-    } catch (e) {
-      /* ignore */
-    }
-  }
-
-  // ---- Haptic tick (if supported)
-  function hapticTick(ms = 6) {
-    try { navigator.vibrate?.(ms); } catch (e) { /* ignore */ }
-  }
-
-  // ---- Pulse highlight
-  function pulseHighlight() {
+  function pulse() {
     if (!highlight) return;
     highlight.classList.remove('pulse');
-    // force reflow so animation retriggers
     void highlight.offsetWidth;
     highlight.classList.add('pulse');
   }
 
-  // 3D styling based on distance
-  function updateStyles(activeIdx) {
-    items.forEach((item, i) => {
-      const dist = i - activeIdx;
-      const abs = Math.abs(dist);
-
-      const t = Math.min(abs / 3, 1);
-      const tilt = dist * (MAX_TILT / 3);
-      const scale = 1 - t * (1 - MAX_SCALE_DOWN);
-      const opacity = abs === 0 ? 1 : abs === 1 ? 0.55 : 0.25;
-      const blur = t * MAX_BLUR;
-
-      item.classList.toggle('active', abs === 0);
-      item.style.opacity = String(opacity);
-      item.style.transform =
-        `translateZ(${abs === 0 ? 10 : 0}px) rotateX(${tilt}deg) scale(${scale})`;
-      item.style.filter = blur > 0 ? `blur(${blur}px)` : 'none';
-    });
+  // Convert scrollTop -> selected index by aligning to CENTER_Y
+  function indexFromScrollTop(top) {
+    // top + CENTER_Y points at the top edge of the highlighted row within scroll content
+    const raw = (top + CENTER_Y - PAD) / ROW_H; // PAD accounts for the top wheel-pad
+    return clamp(Math.round(raw), 0, total - 1);
   }
 
-  // Resistance at edges
-  function applyResistance() {
-    if (el.scrollTop < 0) el.scrollTop *= 0.5;
-    if (el.scrollTop > maxTop) {
-      const over = el.scrollTop - maxTop;
-      el.scrollTop = maxTop + over * 0.5;
+  function scrollTopForIndex(idx) {
+    // We want item idx to land in highlighted row.
+    // item idx top in content = PAD + idx*ROW_H
+    // highlighted row top in viewport = CENTER_Y
+    // so scrollTop = (PAD + idx*ROW_H) - CENTER_Y
+    return (PAD + idx * ROW_H) - CENTER_Y;
+  }
+
+  function setActive(activeIdx) {
+    for (let i = 0; i < total; i++) {
+      const item = items[i];
+      const dist = Math.abs(i - activeIdx);
+      item.classList.toggle('active', dist === 0);
+      // simple opacity falloff (no transforms => no blink)
+      item.style.opacity = dist === 0 ? '1' : dist === 1 ? '0.55' : '0.22';
     }
   }
 
-  // Smooth snap helper
-  function snapToIndex(idx) {
-    const clamped = clampIdx(idx);
-    el.scrollTo({ top: clamped * ROW_H, behavior: 'smooth' });
-    updateStyles(clamped);
+  function snapTo(idx, withPulse = true) {
+    const clamped = clamp(idx, 0, total - 1);
+    el.scrollTo({ top: scrollTopForIndex(clamped), behavior: 'smooth' });
+    setActive(clamped);
     onChange(clamped);
-
-    // snap-complete effects
-    pulseHighlight();
+    if (withPulse) pulse();
   }
 
-  // Initialize default position
-  const startIdx = clampIdx(defaultIdx);
-  el.scrollTop = startIdx * ROW_H;
-  updateStyles(startIdx);
-  onChange(startIdx);
+  // Init position
+  snapTo(defaultIdx, false);
 
-  // Track velocity
-  let lastTop = el.scrollTop;
-  let lastTime = performance.now();
-  let velocity = 0; // px/ms
-  let scrollTimer = null;
-  let lastIdx = startIdx;
+  let rafPending = false;
+  let lastIdx = clamp(defaultIdx, 0, total - 1);
+  let timer = null;
 
-  function computeVelocity() {
-    const now = performance.now();
-    const dt = Math.max(1, now - lastTime);
-    const top = el.scrollTop;
-    velocity = (top - lastTop) / dt; // px/ms
-    lastTop = top;
-    lastTime = now;
-  }
-
-  // Live scroll handling
   el.addEventListener('scroll', () => {
-    applyResistance();
-    computeVelocity();
-
-    const approxIdx = clampIdx(Math.round(el.scrollTop / ROW_H));
-    if (approxIdx !== lastIdx) {
-      // selection changed while scrolling
-      lastIdx = approxIdx;
-      updateStyles(approxIdx);
-      onChange(approxIdx);
-
-      // Tick feedback (subtle)
-      const strength = Math.min(1, Math.max(0.4, Math.abs(velocity) * 1.4));
-      hapticTick(5);
-      tickSound(strength);
+    // Update styles at most once per frame (prevents twitch)
+    if (!rafPending) {
+      rafPending = true;
+      requestAnimationFrame(() => {
+        rafPending = false;
+        const idx = indexFromScrollTop(el.scrollTop);
+        if (idx !== lastIdx) {
+          lastIdx = idx;
+          setActive(idx);
+          onChange(idx);
+        }
+      });
     }
 
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(() => {
-      // When user stops, decide whether to throw further based on velocity
-      const v = velocity;
-
-      if (Math.abs(v) > VELOCITY_THRESHOLD) {
-        // Project momentum forward
-        const projectedTop = el.scrollTop + v * PROJECT_MS;
-        let projectedIdx = Math.round(projectedTop / ROW_H);
-
-        // Cap throw distance so it feels controlled
-        const curIdx = Math.round(el.scrollTop / ROW_H);
-        const delta = projectedIdx - curIdx;
-        const cappedDelta = Math.max(-MAX_THROW_ROWS, Math.min(MAX_THROW_ROWS, delta));
-        projectedIdx = curIdx + cappedDelta;
-
-        snapToIndex(projectedIdx);
-      } else {
-        // Normal snap to nearest
-        snapToIndex(Math.round(el.scrollTop / ROW_H));
-      }
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const idx = indexFromScrollTop(el.scrollTop);
+      snapTo(idx, true);
     }, SNAP_DELAY);
   }, { passive: true });
 
-  // Tap to select an item (native feeling)
+  // Tap to select
   items.forEach((item, i) => {
-    item.addEventListener('click', () => {
-      snapToIndex(i);
-      hapticTick(7);
-      tickSound(0.8);
-    });
+    item.addEventListener('click', () => snapTo(i, true));
   });
 }
 

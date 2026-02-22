@@ -110,148 +110,125 @@ html, body{
 }
 
 /* Wheel mask + highlight */
-/* Give the wheel a 3D feel */
-
-/* ============================================================
-   WHEEL PICKER (R1-friendly + iOS-like depth)
-   Assumes JS uses: ITEM_H = 48, VISIBLE_ROWS = 5
-   ============================================================ */
-
-/* Container that clips the wheel */
+/* ===========================
+   WHEEL PICKER (R1 stable)
+   =========================== */
 .wheel-mask{
   position: relative;
   width: 100%;
-  height: 240px;                 /* 5 rows × 48px */
+  height: 240px;                 /* 5 × 48 */
   overflow: hidden;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
-
-  /* iOS-like depth */
-  perspective: 800px;
 }
 
-/* Fade at top & bottom (so the center row is emphasized) */
 .wheel-mask::before,
 .wheel-mask::after{
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 96px;                  /* 2 rows fade */
-  z-index: 2;
-  pointer-events: none;
+  content:'';
+  position:absolute;
+  left:0; right:0;
+  height: 96px;                  /* 2 × 48 */
+  z-index:2;
+  pointer-events:none;
 }
 
 .wheel-mask::before{
-  top: 0;
+  top:0;
   background: linear-gradient(to bottom, #0a0a12 0%, rgba(10,10,18,0.2) 55%, transparent 100%);
 }
 
 .wheel-mask::after{
-  bottom: 0;
+  bottom:0;
   background: linear-gradient(to top, #0a0a12 0%, rgba(10,10,18,0.2) 55%, transparent 100%);
 }
 
-/* Center highlight row */
 .wheel-highlight{
-  position: absolute;
-  top: 96px;                     /* center row start = 2 × 48 */
+  position:absolute;
+  top: 96px;                     /* 2 × 48 */
   left: 6%;
   right: 6%;
-  height: 48px;                  /* exactly one row */
+  height: 48px;
   border-radius: 14px;
-  z-index: 1;
-  pointer-events: none;
+  z-index:1;
+  pointer-events:none;
 
-  background: rgba(255, 210, 90, 0.08);
-  border: 1px solid rgba(255, 210, 90, 0.55);
+  background: rgba(255,210,90,0.08);
+  border: 1px solid rgba(255,210,90,0.55);
   box-shadow:
     0 0 10px var(--goldGlow1),
     0 0 18px var(--goldGlow2),
-    0 0 2px rgba(255, 241, 176, 0.55) inset;
+    0 0 2px rgba(255,241,176,0.55) inset;
 }
 
-/* Scroll area */
+/* IMPORTANT: stable scrolling */
 .wheel-scroll{
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  scroll-snap-type: y mandatory;
+  width:100%;
+  height:100%;
+  overflow-y:auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-
-  /* we handle “snap feel” in JS; keep CSS neutral */
-  scroll-behavior: auto;
+  scroll-snap-type: none;        /* JS will do snapping */
+  scrollbar-width:none;
+  overscroll-behavior: contain;
 }
+.wheel-scroll::-webkit-scrollbar{ display:none; }
 
-.wheel-scroll::-webkit-scrollbar{
-  display: none;
-}
-
-/* Pads for centering first/last items */
 .wheel-pad{
-  height: 96px;                  /* 2 rows padding */
-  flex-shrink: 0;
+  height:96px;                   /* must be 2 rows */
+  flex-shrink:0;
 }
 
-/* Wheel items */
 .wheel-item{
-  height: 48px;                  /* MUST match ITEM_H */
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 12px;
-  scroll-snap-align: center;
-
-  cursor: pointer;
+  height:48px;                   /* must match ITEM_H */
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:0 12px;
+  cursor:pointer;
   -webkit-tap-highlight-color: transparent;
 
-  /* iOS-like motion */
-  transform-origin: center center;
-  transition: transform 120ms ease, opacity 120ms ease, filter 120ms ease;
-  will-change: transform, opacity;
+  /* reduce twitch/jank */
+  transition: opacity 80ms linear;
+  will-change: opacity;
 }
 
 .wheel-item.active{
   opacity: 1 !important;
-  filter: drop-shadow(0 0 10px rgba(255,210,90,0.18));
 }
 
-/* Deck thumbnail */
 .wheel-thumb{
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: #1a1a2e;
-  flex-shrink: 0;
-
-  /* show full thumbnail (no crop) */
+  width:30px;
+  height:30px;
+  border-radius:8px;
+  background:#1a1a2e;
+  flex-shrink:0;
   object-fit: contain;
 }
 
-/* Deck name */
 .wheel-text{
-  font-size: 14px;               /* R1 readable */
-  font-weight: 700;
-  color: #f0e6d0;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size:14px;
+  font-weight:700;
+  color:#f0e6d0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
-/* Count column */
-.wheel-item-count{
-  justify-content: center;
-}
+.wheel-item-count{ justify-content:center; }
 
 .wheel-num{
-  font-size: 16px;               /* R1 readable */
-  font-weight: 800;
-  color: #f0e6d0;
+  font-size:16px;
+  font-weight:800;
+  color:#f0e6d0;
 }
 
+/* Pulse (keep it lightweight) */
+@keyframes wheelPulseGold{
+  0%   { box-shadow: 0 0 10px var(--goldGlow1), 0 0 18px var(--goldGlow2), 0 0 2px rgba(255,241,176,0.55) inset; }
+  50%  { box-shadow: 0 0 16px rgba(255,210,90,0.95), 0 0 30px rgba(255,170,0,0.85), 0 0 6px rgba(255,241,176,0.75) inset; }
+  100% { box-shadow: 0 0 10px var(--goldGlow1), 0 0 18px var(--goldGlow2), 0 0 2px rgba(255,241,176,0.55) inset; }
+}
+.wheel-highlight.pulse{ animation: wheelPulseGold 200ms ease-out; }
 /* Start button */
 .btn-start{
   width:100%;
