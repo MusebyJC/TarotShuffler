@@ -197,7 +197,26 @@ let screen = 'picker'; // picker | grid | spread | card
 
 const PULL_OPTIONS = Array.from({ length: 20 }, (_, i) => i + 1); // 1..20
 const app = document.getElementById('app');
+function applyStageScale() {
+  const root = document.documentElement;
 
+  const designW = Number(getComputedStyle(root).getPropertyValue('--designW')) || 360;
+  const designH = Number(getComputedStyle(root).getPropertyValue('--designH')) || 360;
+
+  // Use visualViewport if available (better on WebViews)
+  const vw = window.visualViewport?.width ?? window.innerWidth;
+  const vh = window.visualViewport?.height ?? window.innerHeight;
+
+  const scale = Math.min(vw / designW, vh / designH);
+
+  root.style.setProperty('--scale', String(scale));
+}
+
+// Run now + on changes
+applyStageScale();
+window.addEventListener('resize', applyStageScale);
+window.visualViewport?.addEventListener('resize', applyStageScale);
+window.visualViewport?.addEventListener('scroll', applyStageScale);
 // ------------------------------------------------------------
 // FALLBACK SYMBOLS
 // ------------------------------------------------------------
@@ -301,91 +320,64 @@ function renderPicker() {
 
 function initWheel(el, defaultIdx, onChange) {
   const items = Array.from(el.querySelectorAll('.wheel-item'));
-  const total = items.length;
+  const totalItems = items.length;
 
-  const ROW_H = ITEM_H;             // 48
-  const PAD = ROW_H * 2;            // wheel-pad is 96 (2 rows)
-  const CENTER_Y = PAD;             // highlight starts at 96px (top of center row)
-  const SNAP_DELAY = 180;           // more stable on R1
+  // start aligned
+  el.scrollTop = defaultIdx * ITEM_H;
 
-  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  let scrollTimer = null;
+  let rafPending = false;
+  let lastIdx = -1;
 
-  const mask = el.closest('.wheel-mask');
-  const highlight = mask?.querySelector('.wheel-highlight');
+  function applyActive(activeIdx) {
+    if (activeIdx === lastIdx) return;
+    lastIdx = activeIdx;
 
-  function pulse() {
-    if (!highlight) return;
-    highlight.classList.remove('pulse');
-    void highlight.offsetWidth;
-    highlight.classList.add('pulse');
-  }
-
-  // Convert scrollTop -> selected index by aligning to CENTER_Y
-  function indexFromScrollTop(top) {
-    // top + CENTER_Y points at the top edge of the highlighted row within scroll content
-    const raw = (top + CENTER_Y - PAD) / ROW_H; // PAD accounts for the top wheel-pad
-    return clamp(Math.round(raw), 0, total - 1);
-  }
-
-  function scrollTopForIndex(idx) {
-    // We want item idx to land in highlighted row.
-    // item idx top in content = PAD + idx*ROW_H
-    // highlighted row top in viewport = CENTER_Y
-    // so scrollTop = (PAD + idx*ROW_H) - CENTER_Y
-    return (PAD + idx * ROW_H) - CENTER_Y;
-  }
-
-  function setActive(activeIdx) {
-    for (let i = 0; i < total; i++) {
+    for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const dist = Math.abs(i - activeIdx);
+
       item.classList.toggle('active', dist === 0);
-      // simple opacity falloff (no transforms => no blink)
-      item.style.opacity = dist === 0 ? '1' : dist === 1 ? '0.55' : '0.22';
+      item.style.opacity = dist === 0 ? '1' : dist === 1 ? '0.45' : '0.2';
+
+      const scale = dist === 0 ? 1 : dist === 1 ? 0.90 : 0.80;
+      item.style.transform = `scale(${scale}) translateZ(0)`;
     }
   }
 
-  function snapTo(idx, withPulse = true) {
-    const clamped = clamp(idx, 0, total - 1);
-    el.scrollTo({ top: scrollTopForIndex(clamped), behavior: 'smooth' });
-    setActive(clamped);
+  function snapToNearest() {
+    const idx = Math.round(el.scrollTop / ITEM_H);
+    const clamped = Math.max(0, Math.min(idx, totalItems - 1));
+    el.scrollTo({ top: clamped * ITEM_H, behavior: 'smooth' });
+    applyActive(clamped);
     onChange(clamped);
-    if (withPulse) pulse();
   }
 
-  // Init position
-  snapTo(defaultIdx, false);
-
-  let rafPending = false;
-  let lastIdx = clamp(defaultIdx, 0, total - 1);
-  let timer = null;
-
   el.addEventListener('scroll', () => {
-    // Update styles at most once per frame (prevents twitch)
+    // throttle style updates
     if (!rafPending) {
       rafPending = true;
       requestAnimationFrame(() => {
         rafPending = false;
-        const idx = indexFromScrollTop(el.scrollTop);
-        if (idx !== lastIdx) {
-          lastIdx = idx;
-          setActive(idx);
-          onChange(idx);
-        }
+        const idx = Math.round(el.scrollTop / ITEM_H);
+        const clamped = Math.max(0, Math.min(idx, totalItems - 1));
+        applyActive(clamped);
       });
     }
 
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      const idx = indexFromScrollTop(el.scrollTop);
-      snapTo(idx, true);
-    }, SNAP_DELAY);
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(snapToNearest, 140);
   }, { passive: true });
 
-  // Tap to select
+  // click-to-select
   items.forEach((item, i) => {
-    item.addEventListener('click', () => snapTo(i, true));
+    item.addEventListener('click', () => {
+      el.scrollTo({ top: i * ITEM_H, behavior: 'smooth' });
+      setTimeout(() => { applyActive(i); onChange(i); }, 200);
+    });
   });
+
+  applyActive(defaultIdx);
 }
 
 // ------------------------------------------------------------
