@@ -1,3 +1,5 @@
+import './style.css';
+
 // R1 Tarot Deck Shuffler — Multi-Deck Edition with iOS Wheel Picker (Local Assets)
 
 //
